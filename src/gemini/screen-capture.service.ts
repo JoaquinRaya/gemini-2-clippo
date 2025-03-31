@@ -1,10 +1,7 @@
 import { Injectable, OnDestroy, OnInit } from '@angular/core';
 import { BehaviorSubject, Observable, Subject, Subscription, takeUntil } from 'rxjs';
-// import { MultimodalLiveService } from '../gemini/gemini-client.service';
 import { Interrupted, LiveConfig, ModelTurn, ServerContent, StreamingLog, TurnComplete } from '../gemini/types';
 import { Part } from '@google/generative-ai';
-
-
 import {
     MultimodalLiveAPIClientConnection,
     MultimodalLiveClient,
@@ -16,11 +13,6 @@ import { audioContext } from './utils';
 import { GenerativeContentBlob } from '@google/generative-ai';
 type ServerContentNullable = ModelTurn | TurnComplete | Interrupted | null;
 
-interface UseMediaStreamResult {
-    isStreaming: Observable<boolean>;
-    start: () => Promise<MediaStream | null>;
-    stop: () => void;
-}
 
 export type ChatMessage = {
     role: string;
@@ -42,18 +34,16 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
     isConnected: boolean = false;
     volume: number = 0;
     streamedMessage: string = '';
-    messages: ChatMessage[] = [];
-    private connectedSubscription: Subscription | undefined;
-    private contentSubscription: Subscription | undefined;
+    
+    private contentSubject = new BehaviorSubject<ServerContentNullable>(null);
+    content$ = this.contentSubject.asObservable();
 
     public wsClient: MultimodalLiveClient;
     private audioStreamer: AudioStreamer | null = null;
     private volumeSubject = new BehaviorSubject<number>(0);
     volume$ = this.volumeSubject.asObservable();
     private destroy$ = new Subject<void>(); // For unsubscribing
-    private contentSubject = new BehaviorSubject<ServerContentNullable>(null);
-    content$ = this.contentSubject.asObservable();
-
+    
     public config: LiveConfig = {
         model: "models/gemini-2.0-flash-exp",
         generationConfig: {
@@ -91,7 +81,6 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
                     this.isStreamingSubject.next(false);
                     this.streamSubject.next(null);
                 };
-                console.log("Tracks: " + stream.getTracks());
                 stream.getTracks().forEach(track => {
                     track.addEventListener('ended', handleStreamEnded);
                     // Store the original stop method so we can call it later
@@ -113,11 +102,11 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
             })
 
             .on('log', (log: StreamingLog) => {
-                console.log(log);
+                //console.log(log);
             })
             .on('content', (data: ServerContent) => {
                 this.contentSubject.next(data);
-                console.log(data);
+                console.log("Received data on screencaptureservice setupeventlisteners" + data);
             })
             .on('close', (e: CloseEvent) => {
                 console.log('WS connection closed', e);
@@ -134,50 +123,13 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
             });
     }
     ngOnInit(): void {
-        this.connectedSubscription = this.connected$.subscribe(
-            (connected) => {
-                console.log('Connected:', connected);
-                this.isConnected = connected;
-            },
-        );
-        this.contentSubscription = this.content$.subscribe(
-            (data) => {
-                if (!data) return;
-                let turn = data as ModelTurn;
-                let turnComplete = (data as TurnComplete).turnComplete;
-                if (turn) {
-                    if (this.streamedMessage.length > 0) {
-                        this.messages.pop();
-                    }
-                    let incomingMessage = turn.modelTurn.parts?.[0]?.text as string;
-                    if (incomingMessage) {
-                        this.streamedMessage += incomingMessage;
-                        this.messages.push({
-                            role: 'model',
-                            text: this.streamedMessage
-                        });
-                    }
-                }
-                if (turnComplete) {
-                    this.messages.push({
-                        role: 'model',
-                        text: this.streamedMessage
-                    });
-                    this.streamedMessage = '';
-                }
-            },
-        );
+
     }
 
     ngOnDestroy(): void {
         this.ngUnsubscribe.next();
         this.ngUnsubscribe.complete();
         this.stop();
-
-        if (this.connectedSubscription) {
-            this.connectedSubscription.unsubscribe();
-            console.log('Connected:', this.isConnected);
-        }
 
         this.destroy$.next();
         this.destroy$.complete();
@@ -241,17 +193,12 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
         };
 
         this.wsClient.send(message);
-
-        this.messages.push({
-            role: 'user',
-            text: message
-        });        
-    }   
+    }
     
     async sendRealtimeInput(chunks: GenerativeContentBlob[]): Promise<any> {
         this.wsClient.sendRealtimeInput(chunks);
     }
-    
+
     private async initializeAudioStreamer(): Promise<void> {
         try {
             const audioCtx = await audioContext({ id: 'audio-out' });
@@ -280,6 +227,7 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
         }
     }
     private setConnected(connected: boolean): void {
+        this.isConnected = connected;
         this.connectedSubject.next(connected);
     }
 
