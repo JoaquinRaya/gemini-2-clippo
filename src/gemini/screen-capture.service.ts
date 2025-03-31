@@ -105,22 +105,7 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
         });
     }
 
-    private async initializeAudioStreamer(): Promise<void> {
-        try {
-            const audioCtx = await audioContext({ id: 'audio-out' });
-            this.audioStreamer = new AudioStreamer(audioCtx);
-            await this.audioStreamer.addWorklet<any>(
-                'vumeter-out',
-                VolMeterWorket,
-                (ev: any) => {
-                    this.volumeSubject.next(ev.data.volume);
-                },
-            );
-        } catch (error) {
-            console.error('Error initializing audio streamer:', error);
-            // Handle error appropriately (e.g., disable audio features)
-        }
-    }
+    
     private setupEventListeners(): void {
         this.wsClient
             .on('open', () => {
@@ -184,7 +169,6 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
         );
     }
 
-
     ngOnDestroy(): void {
         this.ngUnsubscribe.next();
         this.ngUnsubscribe.complete();
@@ -197,14 +181,22 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
 
         this.destroy$.next();
         this.destroy$.complete();
-        this.disconnect(); // Ensure disconnection on service destruction
     }
 
     get isStreaming() {
         return this.isStreamingSubject.value;
     }
 
-    start(): Promise<MediaStream | null> {
+    async start(): Promise<MediaStream | null> {
+        this.wsClient.disconnect();
+        try {
+            await this.wsClient.connect(this.config);
+            this.setConnected(true);
+        } catch (error) {
+            console.error('Connection error:', error);
+            this.setConnected(false); // Ensure state is updated on error
+            throw error; // Re-throw to allow component to handle
+        }
 
         return (navigator.mediaDevices as any).getDisplayMedia({
             video: {
@@ -229,6 +221,10 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
     }
 
     stop(): void {
+        this.wsClient.disconnect();
+        this.stopAudioStreamer(); // Stop audio on disconnect
+        this.setConnected(false);
+
         const stream = this.streamSubject.value;
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
@@ -236,26 +232,42 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
             this.isStreamingSubject.next(false);
         }
     }
+    async send(message: any): Promise<any> {
+        this.streamedMessage = ''; // reset streamed message
+        
+        if (!message) return;
+        let part: Part | Part[] = {
+            text: message,
+        };
 
-    //Comes from the gemini-client.service.ts
-    async connect(config: LiveConfig = this.config): Promise<void> {
-        this.wsClient.disconnect();
+        this.wsClient.send(message);
+
+        this.messages.push({
+            role: 'user',
+            text: message
+        });        
+    }   
+    
+    async sendRealtimeInput(chunks: GenerativeContentBlob[]): Promise<any> {
+        this.wsClient.sendRealtimeInput(chunks);
+    }
+    
+    private async initializeAudioStreamer(): Promise<void> {
         try {
-            await this.wsClient.connect(config);
-            this.setConnected(true);
+            const audioCtx = await audioContext({ id: 'audio-out' });
+            this.audioStreamer = new AudioStreamer(audioCtx);
+            await this.audioStreamer.addWorklet<any>(
+                'vumeter-out',
+                VolMeterWorket,
+                (ev: any) => {
+                    this.volumeSubject.next(ev.data.volume);
+                },
+            );
         } catch (error) {
-            console.error('Connection error:', error);
-            this.setConnected(false); // Ensure state is updated on error
-            throw error; // Re-throw to allow component to handle
+            console.error('Error initializing audio streamer:', error);
+            // Handle error appropriately (e.g., disable audio features)
         }
     }
-
-    disconnect(): void {
-        this.wsClient.disconnect();
-        this.stopAudioStreamer(); // Stop audio on disconnect
-        this.setConnected(false);
-    }
-
     private stopAudioStreamer(): void {
         if (this.audioStreamer) {
             this.audioStreamer.stop();
@@ -271,51 +283,5 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
         this.connectedSubject.next(connected);
     }
 
-    async send(message: any): Promise<any> {
-        this.streamedMessage = ''; // reset streamed message
-        
-        if (!message) return;
-        let part: Part | Part[] = {
-            text: message,
-        };
-
-        this.wsClient.send(message);
-
-        this.messages.push({
-            role: 'user',
-            text: message
-        });        
-    }
-    // connect(): void {
-    //     let config : LiveConfig = {
-    //       model: "models/gemini-2.0-flash-exp",
-    //       generationConfig: {
-    //         // responseModalities: "text",
-    //         responseModalities: "audio", // note "audio" doesn't send a text response over
-    //         speechConfig: {
-    //           voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
-    //         },
-    //       },
-    //       systemInstruction: {
-    //         parts: [
-    //           {
-    //             text: 'You are a helpful assistant.',
-    //           },
-    //         ],
-    //       },
-    //     };
-
-    //     this.multimodalLiveService.connect(config).catch(err => {
-    //       console.error("Failed to connect:", err);
-    //     });
-    //   }
-
-    //   disconnect(): void {
-    //     this.multimodalLiveService.disconnect();
-    //   }
-    // send(): void {
     
-    async sendRealtimeInput(chunks: GenerativeContentBlob[]): Promise<any> {
-        this.wsClient.sendRealtimeInput(chunks);
-    }
 }

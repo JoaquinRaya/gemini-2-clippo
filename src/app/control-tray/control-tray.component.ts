@@ -154,15 +154,12 @@ export class ControlTrayComponent
 
   async connectToggle(): Promise<void> {
     if (this.isConnected) {
-      this.screenCaptureService.disconnect();
-      if (this.screenCaptureService.isStreaming) {
-        this.screenCaptureService.stop();
-        this.onVideoStreamChange.emit(null);
-      }
+      this.screenCaptureService.stop();
+      this.onVideoStreamChange.emit(null);
+
       this.muted = true;
       this.handleAudioRecording();
     } else {
-      this.screenCaptureService.connect();
       if (!this.screenCaptureService.isStreaming) {
         let stream = await this.screenCaptureService.start();
         this.onVideoStreamChange.emit(stream);
