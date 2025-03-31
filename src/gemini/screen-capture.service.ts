@@ -25,6 +25,7 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
     isStreaming$ = this.isStreamingSubject.asObservable();
     private ngUnsubscribe = new Subject<void>();
 
+    connected$: Observable<boolean>;
     isConnected: boolean = false;
     volume: number = 0;
     streamedMessage: string = '';
@@ -33,6 +34,7 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
     private contentSubscription: Subscription | undefined;
 
     constructor(private multimodalLiveService: MultimodalLiveService) {
+        this.connected$ = this.multimodalLiveService.connected$;
         this.stream$.pipe(takeUntil(this.ngUnsubscribe)).subscribe(stream => {
             if (stream) {
                 const handleStreamEnded = () => {

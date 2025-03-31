@@ -1,12 +1,13 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 // import { MultimodalLiveService } from '../gemini/gemini-client.service';
-// import { Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { Part } from '@google/generative-ai';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 // import { LiveConfig, ModelTurn, TurnComplete } from '../gemini/types';
 import { ControlTrayComponent } from './control-tray/control-tray.component';
-import { ChatMessage } from '../gemini/screen-capture.service'
+import { ChatMessage, ScreenCaptureService } from '../gemini/screen-capture.service'
+
 
 // type ChatMessage = {
 //   role: string;
@@ -20,28 +21,46 @@ import { ChatMessage } from '../gemini/screen-capture.service'
   imports: [CommonModule, ReactiveFormsModule, ControlTrayComponent],
 })
 // export class AppComponent implements OnInit, OnDestroy {
-  export class AppComponent {
+export class AppComponent implements OnInit {
   @ViewChild('myVideo') myVideoRef!: ElementRef<HTMLVideoElement>;
 
   title = 'gemini-2-live-angular';
   isConnected: boolean = false;
   // volume: number = 0;
-  // streamedMessage: string = '';
+  streamedMessage: string = '';
   messages: ChatMessage[] = [];
-  // private connectedSubscription: Subscription | undefined;
-  // private contentSubscription: Subscription | undefined;
-
+  private connectedSubscription: Subscription | undefined;
+  private contentSubscription: Subscription | undefined;
 
   chatForm = new FormGroup({
     message: new FormControl('Write a poem.'),
   });
   isFormEmpty: boolean = this.chatForm.value?.message?.length === 0;
 
-  send() :void{
+  ngOnInit(): void {
+    this.connectedSubscription = this.screenCaptureService.connected$.subscribe(
+      (connected) => {
+        console.log('Connected:', connected);
+        this.isConnected = connected;
+      },
+    );
+  }
 
+  send(): void {
+    this.streamedMessage = ''; // reset streamed message
+    let message = (this.chatForm.value?.message as string)?.trim();
+    if (!message) return;
+
+    this.screenCaptureService.send(message);
+    this.messages.push({
+      role: 'user',
+      text: message
+    });
+    this.chatForm.reset();
   }
 
   // constructor(private multimodalLiveService: MultimodalLiveService) { }
+  constructor(private screenCaptureService: ScreenCaptureService) { }
 
   // ngOnInit(): void {
   //   this.connectedSubscription = this.multimodalLiveService.connected$.subscribe(
@@ -135,7 +154,7 @@ import { ChatMessage } from '../gemini/screen-capture.service'
 
   handleVideoStreamChange(stream: MediaStream | null) {
     // Handle the video stream change here (e.g., update the video element)
-    if(this.myVideoRef){
+    if (this.myVideoRef) {
       this.myVideoRef.nativeElement.srcObject = stream;
     }
   }
