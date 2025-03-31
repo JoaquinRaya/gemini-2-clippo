@@ -1,6 +1,5 @@
 <p>Connection Status: {{ isConnected ? 'Connected' : 'Disconnected' }}</p>
-<button (click)="connect()" [disabled]="isConnected">Connect</button>
-<button (click)="disconnect()" [disabled]="!isConnected">Disconnect</button>
+
 <p>Conversation</p>
 <div class="chat-container">
   <div class="message-list">
