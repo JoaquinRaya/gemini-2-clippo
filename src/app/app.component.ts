@@ -1,10 +1,10 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { MultimodalLiveService } from '../gemini/gemini-client.service';
 import { Subscription } from 'rxjs';
-import { Part, SchemaType } from '@google/generative-ai';
+import { Part } from '@google/generative-ai';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { LiveConfig, ModelTurn, ToolCall, ToolCallCancellation, TurnComplete } from '../gemini/types';
+import { LiveConfig, ModelTurn, TurnComplete } from '../gemini/types';
 import { ControlTrayComponent } from './control-tray/control-tray.component';
 
 type ChatMessage = {
@@ -73,42 +73,6 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       },
     );
-    this.toolSubscription = this.multimodalLiveService.tool$.subscribe(
-      (data) => {
-        // Executable function code.
-        interface WeatherParams {
-          location: string;
-          unit: string;
-        }
-        const functions = {
-          getCurrentWeather: ({ location, unit }: WeatherParams) => {
-            // mock API response
-            return {
-              location,
-              temperature: "25°" + (unit.toLowerCase() === "celsius" ? "C" : "F"),
-            };
-          }
-        };
-
-        if (!data) return;
-        let toolCall = data as ToolCall;
-        const call = toolCall.functionCalls?.[0];
-        const id = toolCall.functionCalls?.[0].id;
-        if (call) {
-          // Call the actual function
-          if (call.name === "getCurrentWeather") {
-            const callResponse = functions[call.name](call.args as WeatherParams);
-            // Send the API response back to the model
-            this.multimodalLiveService.sendToolResponse({
-              functionResponses: [{
-                response: callResponse,
-                id,
-              }]
-            });
-          }
-        }
-      },
-    );
   }
 
   ngOnDestroy(): void {
@@ -119,29 +83,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   connect(): void {
-    // function calling setup
     
-    // Define the function to be called.
-    // Following the specificication at https://spec.openapis.org/oas/v3.0.3
-    const getCurrentWeatherFunction = {
-      name: "getCurrentWeather",
-      description: "Get the current weather in a given location",
-      parameters: {
-        type: SchemaType.OBJECT,
-        properties: {
-          location: {
-            type: SchemaType.STRING,
-            description: "The city and state, e.g. San Francisco, CA",
-          },
-          unit: {
-            type: SchemaType.STRING,
-            enum: ["celsius", "fahrenheit"],
-            description: "The temperature unit to use. Infer this from the users location.",
-          },
-        },
-        required: ["location", "unit"],
-      },
-    };
     
     let config : LiveConfig = {
       model: "models/gemini-2.0-flash-exp",
@@ -159,15 +101,6 @@ export class AppComponent implements OnInit, OnDestroy {
           },
         ],
       },
-      tools: [
-        { googleSearch: {} }, 
-        { codeExecution: {} },
-        {
-          functionDeclarations: [
-            getCurrentWeatherFunction,
-          ],
-        },
-      ],
     };
 
     this.multimodalLiveService.connect(config).catch(err => {
