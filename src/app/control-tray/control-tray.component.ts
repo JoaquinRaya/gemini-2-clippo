@@ -1,5 +1,4 @@
 import {
-  AfterViewInit,
   ChangeDetectorRef,
   Component,
   ElementRef,
@@ -10,7 +9,7 @@ import {
   Output,
   ViewChild,
 } from '@angular/core';
-import { Observable, Subject, takeUntil, lastValueFrom, last } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { AudioPulseComponent } from '../audio-pulse/audio-pulse.component';
 import { AudioRecorder } from '../../gemini/audio-recorder';
 import { MultimodalLiveService } from '../../gemini/gemini-client.service';
@@ -79,7 +78,7 @@ export class ControlTrayComponent
           this.connectButtonRef.nativeElement.focus();
           this.cdr.detectChanges(); // Trigger change detection after focus
         }
-        if(!connected){
+        if (!connected) {
           if (this.screenCaptureService.isStreaming) {
             this.screenCaptureService.stop();
             this.onVideoStreamChange.emit(null);
@@ -153,26 +152,23 @@ export class ControlTrayComponent
     }
   }
 
-  toggleMute(): void {
-    this.muted = !this.muted;
-    this.handleAudioRecording();
-  }
-
-  async toggleScreenCaptureStream(): Promise<void> {
-    if (this.screenCaptureService.isStreaming) {
-      this.screenCaptureService.stop();
-      this.onVideoStreamChange.emit(null);
-    } else {
-      let stream = await this.screenCaptureService.start();
-      this.onVideoStreamChange.emit(stream);
-    }
-  }
-
-  connectToggle(): void {
+  async connectToggle(): Promise<void> {
     if (this.isConnected) {
       this.multimodalLiveService.disconnect();
+      if (this.screenCaptureService.isStreaming) {
+        this.screenCaptureService.stop();
+        this.onVideoStreamChange.emit(null);
+      }
+      this.muted = true;
+      this.handleAudioRecording();
     } else {
       this.multimodalLiveService.connect();
+      if (!this.screenCaptureService.isStreaming) {
+        let stream = await this.screenCaptureService.start();
+        this.onVideoStreamChange.emit(stream);
+      };
+      this.muted = false;
+      this.handleAudioRecording();
     }
   }
 

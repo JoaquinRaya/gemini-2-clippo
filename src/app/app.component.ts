@@ -28,7 +28,6 @@ export class AppComponent implements OnInit, OnDestroy {
   messages: ChatMessage[] = [];
   private connectedSubscription: Subscription | undefined;
   private contentSubscription: Subscription | undefined;
-  private toolSubscription: Subscription | undefined;
 
 
   chatForm = new FormGroup({
@@ -83,8 +82,6 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   connect(): void {
-    
-    
     let config : LiveConfig = {
       model: "models/gemini-2.0-flash-exp",
       generationConfig: {

@@ -2,34 +2,15 @@
   <canvas #renderCanvas style="display: none"></canvas>
 
   <nav class="actions-nav" [class.disabled]="!isConnected">
-    <button class="action-button mic-button" (click)="toggleMute()">
-      <span class="material-symbols-outlined filled">
-        {{muted ? 'mic_off' : 'mic'}}
-      </span>
-    </button>
-
     <div class="action-button no-action outlined">
-      <app-audio-pulse 
-        [volume]="inVolume"
-        [active]="isConnected"
-        [hover]="false"/>
+      <app-audio-pulse [volume]="inVolume" [active]="isConnected" [hover]="false" />
     </div>
-
-    @if (supportsVideo) {
-      <button class="action-button" (click)="toggleScreenCaptureStream()">
-        <span class="material-symbols-outlined">
-          {{screenCaptureService.isStreaming ? 'cancel_presentation' : 'present_to_all'}}
-        </span>
-      </button>
-    }
-
     <ng-content></ng-content>
   </nav>
 
   <div class="connection-container" [class.connected]="isConnected">
     <div class="connection-button-container">
-      <button #connectButton class="action-button connect-toggle"
-        [class.connected]="isConnected"
+      <button #connectButton class="action-button connect-toggle" [class.connected]="isConnected"
         (click)="connectToggle()">
         <span class="material-symbols-outlined filled">
           {{isConnected ? 'pause' : 'play_arrow'}}

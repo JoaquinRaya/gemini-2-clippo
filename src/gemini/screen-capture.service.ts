@@ -24,7 +24,7 @@ export class ScreenCaptureService implements OnDestroy {
                     this.isStreamingSubject.next(false);
                     this.streamSubject.next(null);
                 };
-
+                console.log("Tracks: " + stream.getTracks());
                 stream.getTracks().forEach(track => {
                     track.addEventListener('ended', handleStreamEnded);
                     // Store the original stop method so we can call it later
@@ -49,7 +49,16 @@ export class ScreenCaptureService implements OnDestroy {
     }
 
     start(): Promise<MediaStream | null> {
-        return (navigator.mediaDevices as any).getDisplayMedia({ video: true })
+        
+        return (navigator.mediaDevices as any).getDisplayMedia({ video: {
+            displaySurface: "browser",
+          },
+          audio: {
+            suppressLocalAudioPlayback: true,
+          },
+          preferCurrentTab: true, // Hint to pre-select the current tab if possible
+          selfBrowserSurface: "include", // Include the current tab in the list
+        })
             .then((mediaStream: MediaStream | null) => {
                 this.streamSubject.next(mediaStream);
                 this.isStreamingSubject.next(true);
