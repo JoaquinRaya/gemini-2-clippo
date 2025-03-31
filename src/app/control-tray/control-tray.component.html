@@ -21,12 +21,6 @@
           {{screenCaptureService.isStreaming ? 'cancel_presentation' : 'present_to_all'}}
         </span>
       </button>
-
-      <button class="action-button" (click)="toggleWebCamStream()">
-        <span class="material-symbols-outlined">
-          {{webcamService.isStreaming ? 'videocam_off' : 'videocam'}}
-        </span>
-      </button>
     }
 
     <ng-content></ng-content>

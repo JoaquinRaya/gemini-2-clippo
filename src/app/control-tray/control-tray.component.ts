@@ -15,7 +15,6 @@ import { AudioPulseComponent } from '../audio-pulse/audio-pulse.component';
 import { AudioRecorder } from '../../gemini/audio-recorder';
 import { MultimodalLiveService } from '../../gemini/gemini-client.service';
 import { CommonModule } from '@angular/common';
-import { WebcamService } from '../../gemini/webcam.service';
 import { ScreenCaptureService } from '../../gemini/screen-capture.service';
 
 //Interface for the result of your stream hooks
@@ -41,7 +40,6 @@ export class ControlTrayComponent
   @ViewChild('renderCanvas') renderCanvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('connectButton') connectButtonRef!: ElementRef<HTMLButtonElement>;
 
-  webcamStream: UseMediaStreamResult;
   screenCaptureStream: UseMediaStreamResult;
 
   activeVideoStream: MediaStream | null = null;
@@ -66,11 +64,9 @@ export class ControlTrayComponent
 
   constructor(
     private multimodalLiveService: MultimodalLiveService,
-    public webcamService: WebcamService,
     public screenCaptureService: ScreenCaptureService,
     private cdr: ChangeDetectorRef,
   ) {
-    this.webcamStream = this.createWebcamStream();
     this.screenCaptureStream = this.createScreenCaptureStream();
   }
 
@@ -88,10 +84,6 @@ export class ControlTrayComponent
             this.screenCaptureService.stop();
             this.onVideoStreamChange.emit(null);
           }
-          if (this.webcamService.isStreaming) {
-            this.webcamService.stop();
-            this.onVideoStreamChange.emit(null);
-          }
         }
         this.handleAudioRecording();
       });
@@ -99,12 +91,6 @@ export class ControlTrayComponent
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe((volume) => {
         this.inVolume = volume;
-      });
-
-    this.webcamService.stream$
-      .pipe(takeUntil(this.ngUnsubscribe))
-      .subscribe((stream) => {
-        this.changeActiveVideoStream(stream);
       });
 
     this.screenCaptureService.stream$
@@ -152,14 +138,6 @@ export class ControlTrayComponent
     }
   }
 
-  createWebcamStream(): UseMediaStreamResult {
-    return {
-      isStreaming: this.webcamService.isStreaming,
-      start: () => this.webcamService.start(),
-      stop: () => this.webcamService.stop()
-    };
-  }
-
   createScreenCaptureStream(): UseMediaStreamResult {
     return {
       isStreaming: this.screenCaptureService.isStreaming,
@@ -180,31 +158,11 @@ export class ControlTrayComponent
     this.handleAudioRecording();
   }
 
-  async toggleWebCamStream(): Promise<void> {
-    if (this.webcamService.isStreaming) {
-      this.webcamService.stop();
-      this.onVideoStreamChange.emit(null);
-    } else {
-      // avoid two streams at the same time
-      if (this.screenCaptureService.isStreaming) {
-        this.screenCaptureService.stop();
-        this.onVideoStreamChange.emit(null);
-      }
-      let stream = await this.webcamService.start();
-      this.onVideoStreamChange.emit(stream);
-    }
-  }
-
   async toggleScreenCaptureStream(): Promise<void> {
     if (this.screenCaptureService.isStreaming) {
       this.screenCaptureService.stop();
       this.onVideoStreamChange.emit(null);
     } else {
-      // avoid two streams at the same time
-      if (this.webcamService.isStreaming) {
-        this.webcamService.stop();
-        this.onVideoStreamChange.emit(null);
-      }
       let stream = await this.screenCaptureService.start();
       this.onVideoStreamChange.emit(stream);
     }
@@ -219,7 +177,7 @@ export class ControlTrayComponent
   }
 
   private sendVideoFrame = () => {
-    if (!this.webcamService.isStreaming && !this.screenCaptureService.isStreaming) return;
+    if (!this.screenCaptureService.isStreaming) return;
 
     const video = this.videoRef;
     const canvas = this.renderCanvasRef?.nativeElement;
