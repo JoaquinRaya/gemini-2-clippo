@@ -12,7 +12,7 @@ import {
 import { Subject, takeUntil } from 'rxjs';
 import { AudioPulseComponent } from '../audio-pulse/audio-pulse.component';
 import { AudioRecorder } from '../../gemini/audio-recorder';
-import { MultimodalLiveService } from '../../gemini/gemini-client.service';
+// import { MultimodalLiveService } from '../../gemini/gemini-client.service';
 import { CommonModule } from '@angular/common';
 import { ScreenCaptureService } from '../../gemini/screen-capture.service';
 
@@ -62,7 +62,7 @@ export class ControlTrayComponent
   }
 
   constructor(
-    private multimodalLiveService: MultimodalLiveService,
+    // private multimodalLiveService: MultimodalLiveService,
     public screenCaptureService: ScreenCaptureService,
     private cdr: ChangeDetectorRef,
   ) {
@@ -70,7 +70,7 @@ export class ControlTrayComponent
   }
 
   ngOnInit(): void {
-    this.multimodalLiveService.connected$
+    this.screenCaptureService.connected$
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe((connected) => {
         this.isConnected = connected;
@@ -86,7 +86,7 @@ export class ControlTrayComponent
         }
         this.handleAudioRecording();
       });
-    this.multimodalLiveService.volume$
+    this.screenCaptureService.volume$
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe((volume) => {
         this.inVolume = volume;
@@ -122,7 +122,7 @@ export class ControlTrayComponent
     if (this.isConnected && !this.muted) {
       this.audioRecorder
         .on('data', (base64: string) => {
-          this.multimodalLiveService.sendRealtimeInput([{
+          this.screenCaptureService.sendRealtimeInput([{
             mimeType: 'audio/pcm;rate=16000',
             data: base64
           }]);
@@ -154,7 +154,7 @@ export class ControlTrayComponent
 
   async connectToggle(): Promise<void> {
     if (this.isConnected) {
-      this.multimodalLiveService.disconnect();
+      this.screenCaptureService.disconnect();
       if (this.screenCaptureService.isStreaming) {
         this.screenCaptureService.stop();
         this.onVideoStreamChange.emit(null);
@@ -162,7 +162,7 @@ export class ControlTrayComponent
       this.muted = true;
       this.handleAudioRecording();
     } else {
-      this.multimodalLiveService.connect();
+      this.screenCaptureService.connect();
       if (!this.screenCaptureService.isStreaming) {
         let stream = await this.screenCaptureService.start();
         this.onVideoStreamChange.emit(stream);
@@ -187,7 +187,7 @@ export class ControlTrayComponent
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const base64 = canvas.toDataURL('image/jpeg', 1.0);
       const data = base64.slice(base64.indexOf(',') + 1, Infinity);
-      this.multimodalLiveService.sendRealtimeInput([{ mimeType: 'image/jpeg', data }]);
+      this.screenCaptureService.sendRealtimeInput([{ mimeType: 'image/jpeg', data }]);
       //console.log(`[sendVideoFrame]: Stream going out`, data);
     }
     if (this.isConnected) {
