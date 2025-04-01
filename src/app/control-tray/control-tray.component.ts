@@ -3,7 +3,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { AudioPulseComponent } from '../audio-pulse/audio-pulse.component';
 import { AudioRecorder } from '../../gemini/audio-recorder';
 import { CommonModule } from '@angular/common';
-import { ScreenCaptureService } from '../../gemini/screen-capture.service';
+import { ClippoService } from '../../gemini/clippo.service';
 import { StreamConfig, UseMediaStreamResult } from '../../gemini/types';
 
 @Component({
@@ -38,7 +38,7 @@ export class ControlTrayComponent implements OnDestroy {
     public inVolume = 0;
 
     constructor(
-        public readonly screenCaptureService: ScreenCaptureService,
+        public readonly screenCaptureService: ClippoService,
         private readonly cdr: ChangeDetectorRef,
     ) {
         this.screenCaptureStream = this.createScreenCaptureStream();

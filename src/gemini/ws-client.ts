@@ -23,6 +23,8 @@ import {
   isModelTurn,
   isServerContentMessage,
   isSetupCompleteMessage,
+  isToolCallCancellationMessage,
+  isToolCallMessage,
   isTurnComplete,
   LiveIncomingMessage,
   ModelTurn,
@@ -30,6 +32,9 @@ import {
   ServerContent,
   SetupMessage,
   StreamingLog,
+  ToolCall,
+  ToolCallCancellation,
+  ToolResponseMessage,
   type LiveConfig,
 } from "./types";
 import { blobToJSON, base64ToArrayBuffer } from "./utils";
@@ -46,6 +51,8 @@ interface MultimodalLiveClientEventTypes {
   interrupted: () => void;
   setupcomplete: () => void;
   turncomplete: () => void;
+  toolcall: (toolCall: ToolCall) => void;
+  toolcallcancellation: (toolcallCancellation: ToolCallCancellation) => void;
 }
 
 export type MultimodalLiveAPIClientConnection = {
@@ -163,7 +170,17 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
     const response: LiveIncomingMessage = (await blobToJSON(
       blob,
     )) as LiveIncomingMessage;
-    
+    if (isToolCallMessage(response)) {
+      this.log("server.toolCall", response);
+      this.emit("toolcall", response.toolCall);
+      return;
+    }
+    if (isToolCallCancellationMessage(response)) {
+      this.log("receive.toolCallCancellation", response);
+      this.emit("toolcallcancellation", response.toolCallCancellation);
+      return;
+    }
+
     if (isSetupCompleteMessage(response)) {
       this.log("server.send", "setupComplete");
       this.emit("setupcomplete");
@@ -254,6 +271,18 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
     };
     this._sendDirect(data);
     this.log(`client.realtimeInput`, message);
+  }
+
+  /**
+   *  send a response to a function call and provide the id of the functions you are responding to
+   */
+  sendToolResponse(toolResponse: ToolResponseMessage["toolResponse"]) {
+    const message: ToolResponseMessage = {
+      toolResponse,
+    };
+
+    this._sendDirect(message);
+    this.log(`client.toolResponse`, message);
   }
 
   /**

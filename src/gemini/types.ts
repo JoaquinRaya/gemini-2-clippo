@@ -22,7 +22,9 @@ import type {
     Part,
     Tool,
 } from "@google/generative-ai";
-
+type CursorControlProps = {
+    lastCapturedFrame: string | null;
+  };
 /**
  * this module contains type-definitions and Type-Guards
  */
