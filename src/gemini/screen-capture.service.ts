@@ -185,14 +185,18 @@ export class ScreenCaptureService implements OnInit, OnDestroy {
         }
     }
     async send(message: any): Promise<any> {
-        this.streamedMessage = ''; // reset streamed message
+        if (!this.isConnected) {
+            throw new Error('Not connected to Gemini. Please connect first.');
+        }
         
+        this.streamedMessage = ''; // reset streamed message
         if (!message) return;
+        
         let part: Part | Part[] = {
             text: message,
         };
 
-        this.wsClient.send(message);
+        this.wsClient.send(part);
     }
     
     async sendRealtimeInput(chunks: GenerativeContentBlob[]): Promise<any> {

@@ -16,9 +16,8 @@
   </div>
   <form [formGroup]="chatForm" (ngSubmit)="send()">
     <div class="input-area">
-      <input #input [disabled]="!isConnected" placeholder="Type your message here" formControlName="message">
-      <button type="button" (click)="reset()" [disabled]="input.value.length==0">X</button>
-      <button type="submit" [disabled]="!isConnected || input.value.length==0">Send</button>
+      <input #input placeholder="Type your message here" formControlName="message">
+      <button type="submit" [disabled]="input.value.length==0">Send</button>
     </div>
   </form>
 </div>
